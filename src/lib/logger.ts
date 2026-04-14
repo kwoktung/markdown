@@ -8,10 +8,10 @@ interface LogMetadata {
 }
 
 export interface Logger {
-  debug(message: string, meta?: LogMetadata): void;
-  info(message: string, meta?: LogMetadata): void;
-  warn(message: string, meta?: LogMetadata): void;
-  error(message: string, meta?: LogMetadata): void;
+  debug: (message: string, meta?: LogMetadata) => void;
+  info: (message: string, meta?: LogMetadata) => void;
+  warn: (message: string, meta?: LogMetadata) => void;
+  error: (message: string, meta?: LogMetadata) => void;
 }
 
 class CloudflareLogger implements Logger {
@@ -71,7 +71,7 @@ class CloudflareLogger implements Logger {
   }
 }
 
-export const getLogger = (env: CloudflareEnv): Logger => {
-  const level: LogLevel = env.NEXTJS_ENV === "production" ? "info" : "debug";
+export const getLogger = (): Logger => {
+  const level: LogLevel = import.meta.env.PROD ? "info" : "debug";
   return new CloudflareLogger(level);
 };

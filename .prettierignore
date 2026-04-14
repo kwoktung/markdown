@@ -1,5 +1,7 @@
 # Ignore artifacts:
 build
 coverage
-src/database/migrations
-cloudflare-env.d.ts
+src/db/migrations
+worker-configuration.d.ts
+routeTree.gen.ts
+pnpm-lock.yaml

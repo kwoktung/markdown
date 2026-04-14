@@ -26,7 +26,7 @@ export function AiChatPanel({
 }: AiChatPanelProps) {
   const [isClosing, setIsClosing] = useState(false);
   const { width, handleResizeStart } = usePanelResize();
-  const { messages, isLoading, messagesEndRef, sendMessage } = useChat({
+  const { messages, isLoading, messagesEndRef, sendMessage, abort } = useChat({
     currentContent,
     documentTitle,
     onSetContent,
@@ -96,7 +96,7 @@ export function AiChatPanel({
         </div>
 
         {/* Input */}
-        <ChatInput isLoading={isLoading} onSend={sendMessage} />
+        <ChatInput isLoading={isLoading} onSend={sendMessage} onAbort={abort} />
       </div>
     </>
   );

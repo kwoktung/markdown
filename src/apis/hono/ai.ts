@@ -92,6 +92,7 @@ const app = new Hono<HonoContext>().post(
           tools,
           stopWhen: stepCountIs(10),
           maxOutputTokens: mode === "ask" ? 1024 : 4096,
+          abortSignal: c.req.raw.signal,
           experimental_onToolCallStart: async ({ toolCall }) => {
             const action =
               TOOL_ACTIONS[toolCall.toolName] ??

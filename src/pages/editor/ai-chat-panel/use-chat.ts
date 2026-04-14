@@ -35,6 +35,7 @@ export function useChat({
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,6 +49,9 @@ export function useChat({
 
   const sendMessage = async (content: string, mode: "ask" | "agent") => {
     if (!content.trim() || isLoading) return;
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -80,13 +84,19 @@ export function useChat({
         documentTitle,
         onSetContent,
         patchMessage,
+        controller.signal,
       );
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   };
 
-  return { messages, isLoading, messagesEndRef, sendMessage };
+  const abort = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  return { messages, isLoading, messagesEndRef, sendMessage, abort };
 }
 
 async function runStream(
@@ -97,6 +107,7 @@ async function runStream(
   documentTitle: string,
   onSetContent: (content: string) => void,
   patchMessage: (id: string, updates: Partial<Message>) => void,
+  signal: AbortSignal,
 ) {
   try {
     const response = await fetch("/api/ai/agent", {
@@ -108,6 +119,7 @@ async function runStream(
         currentContent,
         documentTitle,
       }),
+      signal,
     });
 
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -159,6 +171,14 @@ async function runStream(
       patchMessage(assistantId, { isStreaming: false });
     }
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      patchMessage(assistantId, {
+        content: "Generation stopped.",
+        stepAction: undefined,
+        isStreaming: false,
+      });
+      return;
+    }
     console.error("Error in stream mode:", error);
     patchMessage(assistantId, {
       content: ERROR_MESSAGE,

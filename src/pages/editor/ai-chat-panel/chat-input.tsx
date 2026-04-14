@@ -6,14 +6,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Send, Loader2, Pencil, MessageCircle, Paperclip } from "lucide-react";
+import { Send, Square, Pencil, MessageCircle, Paperclip } from "lucide-react";
 
 interface ChatInputProps {
   isLoading: boolean;
   onSend: (content: string, mode: "ask" | "agent") => void;
+  onAbort: () => void;
 }
 
-export function ChatInput({ isLoading, onSend }: ChatInputProps) {
+export function ChatInput({ isLoading, onSend, onAbort }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"ask" | "agent">("ask");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -98,18 +99,26 @@ export function ChatInput({ isLoading, onSend }: ChatInputProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-            className="h-8 w-8 rounded-lg shrink-0"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
+          {isLoading ? (
+            <Button
+              onClick={onAbort}
+              size="icon"
+              variant="destructive"
+              className="h-8 w-8 rounded-lg shrink-0"
+              title="Stop generating"
+            >
+              <Square className="h-4 w-4 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              size="icon"
+              className="h-8 w-8 rounded-lg shrink-0"
+            >
               <Send className="h-4 w-4" />
-            )}
-          </Button>
+            </Button>
+          )}
         </div>
       </div>
     </div>

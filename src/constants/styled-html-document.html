@@ -1,174 +1,216 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{title}}</title>
-  {{#hasMermaid}}<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>{{/hasMermaid}}
-  <style>
-    /* GitHub Markdown CSS - Minimal version for PDF */
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
-      font-size: 16px;
-      line-height: 1.5;
-      word-wrap: break-word;
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 45px;
-      background-color: #ffffff;
-      color: #1f2328;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 24px;
-      margin-bottom: 16px;
-      font-weight: 600;
-      line-height: 1.25;
-    }
-
-    h1 { font-size: 2em; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
-    h2 { font-size: 1.5em; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
-    h3 { font-size: 1.25em; }
-    h4 { font-size: 1em; }
-    h5 { font-size: 0.875em; }
-    h6 { font-size: 0.85em; color: #656d76; }
-
-    p { margin-top: 0; margin-bottom: 10px; }
-
-    a { color: #000; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    code {
-      padding: 0.2em 0.4em;
-      margin: 0;
-      font-size: 85%;
-      background-color: #f6f8fa;
-      border-radius: 6px;
-      font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-    }
-
-    pre {
-      padding: 16px;
-      overflow: auto;
-      font-size: 85%;
-      line-height: 1.45;
-      background-color: #f6f8fa;
-      border-radius: 6px;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-
-    pre code {
-      padding: 0;
-      background-color: transparent;
-      border: 0;
-    }
-
-    ul, ol {
-      margin-top: 0;
-      margin-bottom: 16px;
-      padding-left: 2em;
-    }
-
-    li + li { margin-top: 0.25em; }
-
-    blockquote {
-      margin: 0;
-      padding: 0 1em;
-      color: #656d76;
-      border-left: 0.25em solid #d0d7de;
-      margin-bottom: 16px;
-    }
-
-    table {
-      border-spacing: 0;
-      border-collapse: collapse;
-      margin-top: 0;
-      margin-bottom: 16px;
-      width: 100%;
-    }
-
-    table tr {
-      background-color: #ffffff;
-      border-top: 1px solid #d0d7de;
-    }
-
-    table tr:nth-child(2n) {
-      background-color: #f6f8fa;
-    }
-
-    table th, table td {
-      padding: 6px 13px;
-      border: 1px solid #d0d7de;
-    }
-
-    table th {
-      font-weight: 600;
-      background-color: #f6f8fa;
-    }
-
-    hr {
-      height: 0.25em;
-      padding: 0;
-      margin: 24px 0;
-      background-color: #d0d7de;
-      border: 0;
-    }
-
-    img {
-      max-width: 100%;
-      box-sizing: content-box;
-    }
-
-    strong { font-weight: 600; }
-    em { font-style: italic; }
-
-    /* Mermaid diagram styling */
-    .mermaid {
-      margin: 16px 0;
-      text-align: center;
-      overflow-x: auto;
-    }
-
-    .mermaid svg {
-      max-width: 100%;
-      height: auto;
-    }
-  </style>
-</head>
-<body>
-  <div class="markdown-body">
-    {{{markdownHtml}}}
-  </div>
-  {{#hasMermaid}}
-  <script>
-    (async function() {
-      // Wait for Mermaid.js to load
-      let retries = 50; // 5 seconds max wait
-      while (typeof mermaid === 'undefined' && retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        retries--;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    {{#hasMermaid}}
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    {{/hasMermaid}}
+    <style>
+      /* GitHub Markdown CSS - Minimal version for PDF */
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+          Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        word-wrap: break-word;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 45px;
+        background-color: #ffffff;
+        color: #1f2328;
       }
 
-      if (typeof mermaid !== 'undefined') {
-        mermaid.initialize({
-          theme: 'default',
-          startOnLoad: false
-        });
-        try {
-          await mermaid.run({ querySelector: '.mermaid' });
-          // Signal that Mermaid rendering is complete
-          window.mermaidReady = true;
-        } catch (error) {
-          console.error('Mermaid rendering error:', error);
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 2em;
+        border-bottom: 1px solid #d0d7de;
+        padding-bottom: 0.3em;
+      }
+      h2 {
+        font-size: 1.5em;
+        border-bottom: 1px solid #d0d7de;
+        padding-bottom: 0.3em;
+      }
+      h3 {
+        font-size: 1.25em;
+      }
+      h4 {
+        font-size: 1em;
+      }
+      h5 {
+        font-size: 0.875em;
+      }
+      h6 {
+        font-size: 0.85em;
+        color: #656d76;
+      }
+
+      p {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+
+      a {
+        color: #000;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      code {
+        padding: 0.2em 0.4em;
+        margin: 0;
+        font-size: 85%;
+        background-color: #f6f8fa;
+        border-radius: 6px;
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+
+      pre {
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+        background-color: #f6f8fa;
+        border-radius: 6px;
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+
+      pre code {
+        padding: 0;
+        background-color: transparent;
+        border: 0;
+      }
+
+      ul,
+      ol {
+        margin-top: 0;
+        margin-bottom: 16px;
+        padding-left: 2em;
+      }
+
+      li + li {
+        margin-top: 0.25em;
+      }
+
+      blockquote {
+        margin: 0;
+        padding: 0 1em;
+        color: #656d76;
+        border-left: 0.25em solid #d0d7de;
+        margin-bottom: 16px;
+      }
+
+      table {
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin-top: 0;
+        margin-bottom: 16px;
+        width: 100%;
+      }
+
+      table tr {
+        background-color: #ffffff;
+        border-top: 1px solid #d0d7de;
+      }
+
+      table tr:nth-child(2n) {
+        background-color: #f6f8fa;
+      }
+
+      table th,
+      table td {
+        padding: 6px 13px;
+        border: 1px solid #d0d7de;
+      }
+
+      table th {
+        font-weight: 600;
+        background-color: #f6f8fa;
+      }
+
+      hr {
+        height: 0.25em;
+        padding: 0;
+        margin: 24px 0;
+        background-color: #d0d7de;
+        border: 0;
+      }
+
+      img {
+        max-width: 100%;
+        box-sizing: content-box;
+      }
+
+      strong {
+        font-weight: 600;
+      }
+      em {
+        font-style: italic;
+      }
+
+      /* Mermaid diagram styling */
+      .mermaid {
+        margin: 16px 0;
+        text-align: center;
+        overflow-x: auto;
+      }
+
+      .mermaid svg {
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="markdown-body">{{{markdownHtml}}}</div>
+    {{#hasMermaid}}
+    <script>
+      (async function () {
+        // Wait for Mermaid.js to load
+        let retries = 50; // 5 seconds max wait
+        while (typeof mermaid === "undefined" && retries > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          retries--;
+        }
+
+        if (typeof mermaid !== "undefined") {
+          mermaid.initialize({
+            theme: "default",
+            startOnLoad: false,
+          });
+          try {
+            await mermaid.run({ querySelector: ".mermaid" });
+            // Signal that Mermaid rendering is complete
+            window.mermaidReady = true;
+          } catch (error) {
+            console.error("Mermaid rendering error:", error);
+            window.mermaidReady = false;
+          }
+        } else {
+          console.error("Mermaid.js failed to load");
           window.mermaidReady = false;
         }
-      } else {
-        console.error('Mermaid.js failed to load');
-        window.mermaidReady = false;
-      }
-    })();
-  </script>
-  {{/hasMermaid}}
-</body>
+      })();
+    </script>
+    {{/hasMermaid}}
+  </body>
 </html>

@@ -20,6 +20,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply markdown-db --remote"
   },
   "dependencies": {
+    "@cloudflare/codemode": "^0.3.4",
     "@cloudflare/puppeteer": "^1.0.4",
     "@hono/zod-validator": "^0.7.6",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -41,6 +42,7 @@
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
     "@types/js-cookie": "^3.0.6",
+    "agents": "^0.11.0",
     "ai": "^6.0.159",
     "better-auth": "^1.6.0",
     "class-variance-authority": "^0.7.1",

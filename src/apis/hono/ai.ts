@@ -2,25 +2,21 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { streamText as honoStreamText } from "hono/streaming";
 import { z } from "zod";
-import { streamText, generateText, tool } from "ai";
+import { streamText, tool, stepCountIs } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
+import { createBrowserTools } from "agents/browser/ai";
+import Mustache from "mustache";
 import { getEnv } from "#/env.server";
-import { ASK_SYSTEM_PROMPT, AGENT_SYSTEM_PROMPT } from "#/constants";
+import { AGENT_SYSTEM_PROMPT } from "#/constants";
 
-const chatRequestSchema = z.object({
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().min(1),
-      }),
-    )
-    .min(1),
-  currentResume: z.string().optional(),
-  documentTitle: z.string().optional(),
-});
+const TOOL_ACTIONS: Record<string, string> = {
+  browser_search: "Searching browser documentation...",
+  browser_execute: "Browsing the web...",
+  edit_document: "Editing document...",
+};
 
-const editRequestSchema = z.object({
+const agentRequestSchema = z.object({
+  mode: z.enum(["ask", "agent"]),
   messages: z
     .array(
       z.object({
@@ -33,107 +29,109 @@ const editRequestSchema = z.object({
   documentTitle: z.string().optional(),
 });
 
-const app = new Hono<HonoContext>()
-  .post("/ask", zValidator("json", chatRequestSchema), async (c) => {
-    const body = c.req.valid("json");
-    const { messages, currentResume, documentTitle } = body;
+const app = new Hono<HonoContext>().post(
+  "/agent",
+  zValidator("json", agentRequestSchema),
+  async (c) => {
+    const { mode, messages, currentContent, documentTitle } =
+      c.req.valid("json");
 
-    const conversationMessages: Array<{
-      role: "system" | "user" | "assistant";
-      content: string;
-    }> = [{ role: "system", content: ASK_SYSTEM_PROMPT }];
+    const env = getEnv();
+    const workersai = createWorkersAI({ binding: env.AI });
+    const browserTools = createBrowserTools({
+      browser: env.BROWSER,
+      loader: env.LOADER,
+    });
 
-    if (currentResume?.trim()) {
-      conversationMessages.push({
-        role: "user",
-        content: `Current resume content (title: "${documentTitle ?? "Untitled"}"):\n\n${currentResume}\n\nUse this context to provide personalized advice.`,
-      });
-    }
+    const systemPrompt = Mustache.render(AGENT_SYSTEM_PROMPT, {
+      editCapability: mode === "agent",
+    });
 
-    conversationMessages.push(...messages);
+    const contextMessages = currentContent?.trim()
+      ? [
+          {
+            role: "user" as const,
+            content: `Current document (title: "${documentTitle ?? "Untitled"}"):\n\n${currentContent}`,
+          },
+          {
+            role: "assistant" as const,
+            content: "I have read the document. What would you like?",
+          },
+        ]
+      : [];
 
-    const workersai = createWorkersAI({ binding: getEnv().AI });
+    const tools =
+      mode === "ask"
+        ? { ...browserTools }
+        : {
+            edit_document: tool({
+              description:
+                "Replace the entire document with a revised version. Use this when the user asks to edit, modify, rewrite, or change the document.",
+              inputSchema: z.object({
+                content: z
+                  .string()
+                  .describe("The complete new document content in markdown."),
+                explanation: z
+                  .string()
+                  .describe("A short summary of what was changed."),
+              }),
+              execute: async ({ content, explanation }) => ({
+                content,
+                explanation,
+              }),
+            }),
+            ...browserTools,
+          };
 
     return honoStreamText(c, async (stream) => {
       try {
         const result = streamText({
-          model: workersai("@cf/openai/gpt-oss-120b"),
-          messages: conversationMessages,
-          maxOutputTokens: 1024,
+          model: workersai("@cf/moonshotai/kimi-k2.5"),
+          system: systemPrompt,
+          messages: [...contextMessages, ...messages],
+          tools,
+          stopWhen: stepCountIs(10),
+          maxOutputTokens: mode === "ask" ? 1024 : 4096,
+          experimental_onToolCallStart: async ({ toolCall }) => {
+            const action =
+              TOOL_ACTIONS[toolCall.toolName] ??
+              `Running ${toolCall.toolName}...`;
+            await stream.write(JSON.stringify({ type: "step", action }) + "\n");
+          },
         });
 
         for await (const chunk of result.textStream) {
-          await stream.write(chunk);
+          await stream.write(
+            JSON.stringify({ type: "text", delta: chunk }) + "\n",
+          );
+        }
+
+        if (mode === "agent") {
+          const toolResults = await result.toolResults;
+          const editResult = toolResults?.find(
+            (r) => r.toolName === "edit_document",
+          );
+          if (editResult) {
+            const { content, explanation } = editResult.output as {
+              content: string;
+              explanation: string;
+            };
+            await stream.write(
+              JSON.stringify({ type: "edit", content, explanation }) + "\n",
+            );
+          }
         }
       } catch (err) {
         console.error("AI streaming error:", err);
         await stream.write(
-          "I apologize, but I encountered an error. Please try again.",
+          JSON.stringify({
+            type: "text",
+            delta: "I apologize, but I encountered an error. Please try again.",
+          }) + "\n",
         );
       }
     });
-  })
-  .post("/agent", zValidator("json", editRequestSchema), async (c) => {
-    const { messages, currentContent, documentTitle } = c.req.valid("json");
-
-    const workersai = createWorkersAI({ binding: getEnv().AI });
-
-    const result = await generateText({
-      model: workersai("@cf/openai/gpt-oss-120b"),
-      system: AGENT_SYSTEM_PROMPT,
-      messages: [
-        ...(currentContent?.trim()
-          ? [
-              {
-                role: "user" as const,
-                content: `Current document (title: "${documentTitle ?? "Untitled"}"):\n\n${currentContent}`,
-              },
-              {
-                role: "assistant" as const,
-                content:
-                  "I have read the document. What would you like me to change?",
-              },
-            ]
-          : []),
-        ...messages,
-      ],
-      tools: {
-        edit_document: tool({
-          description:
-            "Replace the entire document with a revised version. Use this when the user asks to edit, modify, rewrite, or change the document.",
-          inputSchema: z.object({
-            content: z
-              .string()
-              .describe("The complete new document content in markdown."),
-            explanation: z
-              .string()
-              .describe("A short summary of what was changed."),
-          }),
-          execute: async ({ content, explanation }) => ({
-            content,
-            explanation,
-          }),
-        }),
-      },
-      maxOutputTokens: 4096,
-    });
-
-    const editResult = result.toolResults?.find(
-      (r) => r.toolName === "edit_document",
-    );
-
-    if (editResult) {
-      const { content, explanation } = editResult.output as {
-        content: string;
-        explanation: string;
-      };
-      return c.json({ type: "edit", content, explanation });
-    }
-
-    return c.json({
-      type: "text",
-      content: result.text || "I couldn't process that request.",
-    });
-  });
+  },
+);
 
 export default app;

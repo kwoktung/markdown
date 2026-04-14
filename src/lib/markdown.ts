@@ -1,4 +1,5 @@
-import { marked, Renderer, type Tokens } from "marked";
+import { marked, Renderer } from "marked";
+import type { Tokens } from "marked";
 
 /**
  * Configure marked options for better markdown rendering
@@ -49,7 +50,7 @@ export function markdownToHtml(markdown: string): string {
 
   try {
     // Convert markdown to HTML
-    const rawHtml = marked.parse(markdown, { async: false }) as string;
+    const rawHtml = marked.parse(markdown, { async: false });
     return dompurify(rawHtml);
   } catch (error) {
     console.error("Error converting markdown to HTML:", error);

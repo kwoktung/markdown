@@ -1,4 +1,4 @@
-# Markdown Pro
+# Markdown
 
 A modern web application for creating and managing documents using Markdown. Built with Next.js, this project provides an intuitive markdown editor with live preview and PDF export capabilities.
 

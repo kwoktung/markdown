@@ -1,8 +1,5 @@
-import puppeteer, {
-  type Browser,
-  BrowserWorker,
-  type Page,
-} from "@cloudflare/puppeteer";
+import puppeteer from "@cloudflare/puppeteer";
+import type { BrowserWorker, Browser, Page } from "@cloudflare/puppeteer";
 import { getStyledHtmlDocument, markdownToHtml } from "./markdown";
 
 // Extend Window interface for Mermaid

@@ -5,20 +5,7 @@ import { z } from "zod";
 import { streamText, generateText, tool } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 import { getEnv } from "#/env.server";
-
-const SYSTEM_PROMPT = `You are an expert resume writing assistant with years of experience in career coaching and recruitment. Your role is to help users create compelling, professional resumes that stand out to employers.
-
-Key guidelines:
-- Be concise, actionable, and specific in your advice
-- Use the STAR method (Situation, Task, Action, Result) for describing experiences
-- Focus on achievements and metrics rather than responsibilities
-- Use strong action verbs (Led, Developed, Achieved, Increased, etc.)
-- Tailor advice to modern resume best practices
-- Be encouraging and supportive
-- When suggesting text, format it in clean markdown
-- Always consider the user's current resume context`;
-
-const EDIT_SYSTEM_PROMPT = `You are an expert document editor. When the user requests edits, modifications, or rewrites to the document, you MUST call the edit_document tool with the complete revised content. Never respond with plain text for edit requests. Always provide a concise explanation of the changes made.`;
+import { ASK_SYSTEM_PROMPT, AGENT_SYSTEM_PROMPT } from "#/constants";
 
 const chatRequestSchema = z.object({
   messages: z
@@ -54,7 +41,7 @@ const app = new Hono<HonoContext>()
     const conversationMessages: Array<{
       role: "system" | "user" | "assistant";
       content: string;
-    }> = [{ role: "system", content: SYSTEM_PROMPT }];
+    }> = [{ role: "system", content: ASK_SYSTEM_PROMPT }];
 
     if (currentResume?.trim()) {
       conversationMessages.push({
@@ -93,7 +80,7 @@ const app = new Hono<HonoContext>()
 
     const result = await generateText({
       model: workersai("@cf/openai/gpt-oss-120b"),
-      system: EDIT_SYSTEM_PROMPT,
+      system: AGENT_SYSTEM_PROMPT,
       messages: [
         ...(currentContent?.trim()
           ? [

@@ -23,15 +23,10 @@ const ERROR_MESSAGE =
 
 interface UseChatOptions {
   currentContent: string;
-  documentTitle: string;
   onSetContent: (content: string) => void;
 }
 
-export function useChat({
-  currentContent,
-  documentTitle,
-  onSetContent,
-}: UseChatOptions) {
+export function useChat({ currentContent, onSetContent }: UseChatOptions) {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -81,7 +76,6 @@ export function useChat({
         assistantId,
         mode,
         currentContent,
-        documentTitle,
         onSetContent,
         patchMessage,
         controller.signal,
@@ -104,7 +98,6 @@ async function runStream(
   assistantId: string,
   mode: "ask" | "agent",
   currentContent: string,
-  documentTitle: string,
   onSetContent: (content: string) => void,
   patchMessage: (id: string, updates: Partial<Message>) => void,
   signal: AbortSignal,
@@ -117,7 +110,6 @@ async function runStream(
         mode,
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
         currentContent,
-        documentTitle,
       }),
       signal,
     });

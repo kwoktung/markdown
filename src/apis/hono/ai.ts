@@ -26,15 +26,13 @@ const agentRequestSchema = z.object({
     )
     .min(1),
   currentContent: z.string().optional(),
-  documentTitle: z.string().optional(),
 });
 
 const app = new Hono<HonoContext>().post(
   "/agent",
   zValidator("json", agentRequestSchema),
   async (c) => {
-    const { mode, messages, currentContent, documentTitle } =
-      c.req.valid("json");
+    const { mode, messages, currentContent } = c.req.valid("json");
 
     const env = getEnv();
     const workersai = createWorkersAI({ binding: env.AI });
@@ -51,7 +49,7 @@ const app = new Hono<HonoContext>().post(
       ? [
           {
             role: "user" as const,
-            content: `Current document (title: "${documentTitle ?? "Untitled"}"):\n\n${currentContent}`,
+            content: `Current document:\n\n${currentContent}`,
           },
           {
             role: "assistant" as const,

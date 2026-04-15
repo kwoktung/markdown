@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { filterMessagesForServer } from "./filter-messages";
 
 export interface Message {
   id: string;
@@ -7,6 +8,7 @@ export interface Message {
   timestamp: Date;
   isStreaming?: boolean;
   wasEdit?: boolean;
+  wasCancelled?: boolean;
   stepAction?: string;
 }
 
@@ -108,7 +110,7 @@ async function runStream(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mode,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: filterMessagesForServer(messages),
         currentContent,
       }),
       signal,
@@ -168,6 +170,7 @@ async function runStream(
         content: "Generation stopped.",
         stepAction: undefined,
         isStreaming: false,
+        wasCancelled: true,
       });
       return;
     }

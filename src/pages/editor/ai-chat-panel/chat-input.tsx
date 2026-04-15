@@ -16,7 +16,7 @@ interface ChatInputProps {
 
 export function ChatInput({ isLoading, onSend, onAbort }: ChatInputProps) {
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState<"ask" | "agent">("ask");
+  const [mode, setMode] = useState<"ask" | "agent">("agent");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleSend = () => {

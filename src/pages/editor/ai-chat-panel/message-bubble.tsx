@@ -1,17 +1,7 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Loader2, User, Bot, Copy, Check, Pencil } from "lucide-react";
+import { Loader2, User, Bot, Pencil } from "lucide-react";
 import type { Message } from "./use-chat";
 
 export function MessageBubble({ message }: { message: Message }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (message.role === "user") {
     return (
       <div className="flex items-start gap-3 justify-end">
@@ -43,39 +33,17 @@ export function MessageBubble({ message }: { message: Message }) {
           {message.content.length === 0 && message.isStreaming ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Thinking...</span>
+              <span>{message.stepAction ?? "Thinking..."}</span>
             </div>
           ) : (
             <p className="text-sm whitespace-pre-wrap">
               {message.content}
               {message.isStreaming && (
-                <span className="inline-block w-[2px] h-4 bg-primary ml-1 animate-pulse" />
+                <span className="inline-block w-0.5 h-4 bg-primary ml-1 animate-pulse" />
               )}
             </p>
           )}
         </div>
-        {message.id !== "welcome" && !message.isStreaming && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="h-7 text-xs"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3 w-3 mr-1" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copy
-                </>
-              )}
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

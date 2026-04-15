@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { filterMessagesForServer } from "./filter-messages";
 
 export interface Message {
   id: string;
@@ -7,6 +8,8 @@ export interface Message {
   timestamp: Date;
   isStreaming?: boolean;
   wasEdit?: boolean;
+  wasCancelled?: boolean;
+  stepAction?: string;
 }
 
 const WELCOME_MESSAGE: Message = {
@@ -20,26 +23,16 @@ const WELCOME_MESSAGE: Message = {
 const ERROR_MESSAGE =
   "Sorry, I encountered an error. Please try again or check your connection.";
 
-interface AgentResponse {
-  type: string;
-  content: string;
-  explanation?: string;
-}
-
 interface UseChatOptions {
   currentContent: string;
-  documentTitle: string;
   onSetContent: (content: string) => void;
 }
 
-export function useChat({
-  currentContent,
-  documentTitle,
-  onSetContent,
-}: UseChatOptions) {
+export function useChat({ currentContent, onSetContent }: UseChatOptions) {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,6 +46,9 @@ export function useChat({
 
   const sendMessage = async (content: string, mode: "ask" | "agent") => {
     if (!content.trim() || isLoading) return;
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -77,115 +73,112 @@ export function useChat({
     setIsLoading(true);
 
     try {
-      if (mode === "agent") {
-        await runAgentMode(
-          [...messages, userMessage],
-          assistantId,
-          currentContent,
-          documentTitle,
-          onSetContent,
-          patchMessage,
-        );
-      } else {
-        await runAskMode(
-          [...messages, userMessage],
-          assistantId,
-          currentContent,
-          documentTitle,
-          patchMessage,
-        );
-      }
+      await runStream(
+        [...messages, userMessage],
+        assistantId,
+        mode,
+        currentContent,
+        onSetContent,
+        patchMessage,
+        controller.signal,
+      );
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   };
 
-  return { messages, isLoading, messagesEndRef, sendMessage };
+  const abort = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  return { messages, isLoading, messagesEndRef, sendMessage, abort };
 }
 
-async function runAgentMode(
+async function runStream(
   messages: Message[],
   assistantId: string,
+  mode: "ask" | "agent",
   currentContent: string,
-  documentTitle: string,
   onSetContent: (content: string) => void,
   patchMessage: (id: string, updates: Partial<Message>) => void,
+  signal: AbortSignal,
 ) {
   try {
     const response = await fetch("/api/ai/agent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        mode,
+        messages: filterMessagesForServer(messages),
         currentContent,
-        documentTitle,
       }),
-    });
-
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const data: AgentResponse = await response.json();
-
-    if (data.type === "edit") {
-      onSetContent(data.content);
-      patchMessage(assistantId, {
-        content: data.explanation ?? "",
-        isStreaming: false,
-        wasEdit: true,
-      });
-    } else {
-      patchMessage(assistantId, { content: data.content, isStreaming: false });
-    }
-  } catch (error) {
-    console.error("Error in agent mode:", error);
-    patchMessage(assistantId, { content: ERROR_MESSAGE, isStreaming: false });
-  }
-}
-
-async function runAskMode(
-  messages: Message[],
-  assistantId: string,
-  currentContent: string,
-  documentTitle: string,
-  patchMessage: (id: string, updates: Partial<Message>) => void,
-) {
-  try {
-    const response = await fetch("/api/ai/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        currentResume: currentContent,
-        documentTitle,
-      }),
+      signal,
     });
 
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const reader = response.body?.getReader();
-    if (!reader) throw new Error("No response body reader available");
+    if (!reader) throw new Error("No response body reader");
 
     const decoder = new TextDecoder();
+    let buffer = "";
     let accumulated = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      accumulated += decoder.decode(value, { stream: true });
-      patchMessage(assistantId, { content: accumulated, isStreaming: true });
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const event = JSON.parse(line) as
+          | { type: "step"; action: string }
+          | { type: "text"; delta: string }
+          | { type: "edit"; content: string; explanation: string };
+
+        if (event.type === "step") {
+          patchMessage(assistantId, { stepAction: event.action });
+        } else if (event.type === "text") {
+          accumulated += event.delta;
+          patchMessage(assistantId, {
+            content: accumulated,
+            stepAction: undefined,
+            isStreaming: true,
+          });
+        } else if (event.type === "edit") {
+          onSetContent(event.content);
+          patchMessage(assistantId, {
+            content: event.explanation,
+            stepAction: undefined,
+            isStreaming: false,
+            wasEdit: true,
+          });
+        }
+      }
     }
 
-    if (accumulated.trim().length === 0) {
-      patchMessage(assistantId, {
-        content:
-          "I apologize, but I couldn't generate a response. Please try again.",
-        isStreaming: false,
-      });
-    } else {
+    if (accumulated) {
       patchMessage(assistantId, { isStreaming: false });
     }
   } catch (error) {
-    console.error("Error in ask mode:", error);
-    patchMessage(assistantId, { content: ERROR_MESSAGE, isStreaming: false });
+    if (error instanceof Error && error.name === "AbortError") {
+      patchMessage(assistantId, {
+        content: "Generation stopped.",
+        stepAction: undefined,
+        isStreaming: false,
+        wasCancelled: true,
+      });
+      return;
+    }
+    console.error("Error in stream mode:", error);
+    patchMessage(assistantId, {
+      content: ERROR_MESSAGE,
+      stepAction: undefined,
+      isStreaming: false,
+    });
   }
 }

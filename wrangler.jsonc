@@ -30,6 +30,11 @@
   "browser": {
     "binding": "BROWSER",
   },
+  "worker_loaders": [
+    {
+      "binding": "LOADER",
+    },
+  ],
   "ai": {
     "binding": "AI",
     "remote": true,

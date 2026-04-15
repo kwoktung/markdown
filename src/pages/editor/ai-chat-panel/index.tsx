@@ -13,7 +13,6 @@ interface AiChatPanelProps {
   currentContent: string;
   onInsertText: (text: string) => void;
   onSetContent: (content: string) => void;
-  documentTitle: string;
 }
 
 export function AiChatPanel({
@@ -22,13 +21,11 @@ export function AiChatPanel({
   currentContent,
   onInsertText: _onInsertText,
   onSetContent,
-  documentTitle,
 }: AiChatPanelProps) {
   const [isClosing, setIsClosing] = useState(false);
   const { width, handleResizeStart } = usePanelResize();
-  const { messages, isLoading, messagesEndRef, sendMessage } = useChat({
+  const { messages, isLoading, messagesEndRef, sendMessage, abort } = useChat({
     currentContent,
-    documentTitle,
     onSetContent,
   });
 
@@ -96,7 +93,7 @@ export function AiChatPanel({
         </div>
 
         {/* Input */}
-        <ChatInput isLoading={isLoading} onSend={sendMessage} />
+        <ChatInput isLoading={isLoading} onSend={sendMessage} onAbort={abort} />
       </div>
     </>
   );

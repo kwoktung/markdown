@@ -95,7 +95,6 @@ function EditorContent() {
             currentContent={doc.content}
             onInsertText={doc.handleInsertText}
             onSetContent={doc.handleSetContent}
-            documentTitle={doc.title}
           />
         </>
       )}
